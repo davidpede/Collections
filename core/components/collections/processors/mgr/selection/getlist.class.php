@@ -28,32 +28,12 @@ class CollectionsSelectionGetListProcessor extends modObjectGetListProcessor
     public $searchQueryExcludeTagger = false;
     public $searchQueryTitleOnly = false;
 
-    public $permissions = array(
-        'publish_document' => false,
-        'unpublish_document' => false,
-        'delete_document' => false,
-        'undelete_document' => false,
-        'view_document' => false,
-        'edit_document' => false,
-        'purge_deleted' => false,
-    );
-
     public function initialize()
     {
         $parent = $this->getProperty('parent', null);
         if (empty($parent)) {
             return false;
         }
-
-        $this->permissions = array(
-            'publish_document' => $this->modx->hasPermission('publish_document'),
-            'unpublish_document' => $this->modx->hasPermission('unpublish_document'),
-            'delete_document' => $this->modx->hasPermission('delete_document'),
-            'undelete_document' => $this->modx->hasPermission('undelete_document'),
-            'view_document' => $this->modx->hasPermission('view_document'),
-            'edit_document' => $this->modx->hasPermission('edit_document'),
-            'purge_deleted' => $this->modx->hasPermission('purge_deleted'),
-        );
 
         $this->setActions();
 
@@ -271,16 +251,6 @@ class CollectionsSelectionGetListProcessor extends modObjectGetListProcessor
                     'OR:CreatedBy.username:LIKE' => '%' . $query . '%',
                 );
             }
-            
-            if ($this->searchQueryExcludeTvs == false) {
-                // tv columns search rules
-                foreach ($this->tvColumns as $column) {
-                    array_push($queryWhere, array(
-                        'OR:TemplateVarResources_' . $column['column'] . '.value:LIKE' => '%' . $query . '%',
-                    ));
-                }
-            }
-            
             if ($this->searchQueryExcludeTagger == false) {
                 $taggerInstalled = $this->modx->collections->getOption('taggerInstalled', null, false);
                 if ($taggerInstalled) {
@@ -429,12 +399,7 @@ class CollectionsSelectionGetListProcessor extends modObjectGetListProcessor
         }
 
         $this->modx->getContext($resourceArray['context_key']);
-        
-        if (!$resourceArray['deleted']) {
-            $resourceArray['preview_url'] = $this->modx->makeUrl($resourceArray['id'], $resourceArray['context_key']);
-        } else {
-            $resourceArray['preview_url'] = '';
-        }
+        $resourceArray['preview_url'] = $this->modx->makeUrl($resourceArray['id'], $resourceArray['context_key']);
 
         return $resourceArray;
     }
@@ -447,42 +412,30 @@ class CollectionsSelectionGetListProcessor extends modObjectGetListProcessor
             if (isset($this->actions[$button])) {
                 switch ($button) {
                     case 'publish':
-                        if ($this->permissions['publish_document'] && empty($resourceArray['published'])) {
+                        if (empty($resourceArray['published'])) {
                             $resourceArray['actions'][] = $this->actions[$button];
                         }
                         break;
                     case 'unpublish':
-                        if ($this->permissions['unpublish_document'] && !empty($resourceArray['published'])) {
+                        if (!empty($resourceArray['published'])) {
                             $resourceArray['actions'][] = $this->actions[$button];
                         }
                         break;
                     case 'quickupdate':
-                        if ($this->permissions['edit_document']) {
-                            $resourceArray['actions'][] = $this->actions[$button];
-                        }
+                        $resourceArray['actions'][] = $this->actions[$button];
                         break;
                     case 'delete':
-                        if ($this->permissions['delete_document'] && empty($resourceArray['deleted'])) {
+                        if (empty($resourceArray['deleted'])) {
                             $resourceArray['actions'][] = $this->actions[$button];
                         }
                         break;
                     case 'undelete':
-                        if ($this->permissions['undelete_document'] && !empty($resourceArray['deleted'])) {
+                        if (!empty($resourceArray['deleted'])) {
                             $resourceArray['actions'][] = $this->actions[$button];
                         }
                         break;
                     case 'remove':
-                        if ($this->permissions['purge_deleted'] && !empty($resourceArray['deleted'])) {
-                            $resourceArray['actions'][] = $this->actions[$button];
-                        }
-                        break;
-                    case 'edit':
-                        if ($this->permissions['edit_document']) {
-                            $resourceArray['actions'][] = $this->actions[$button];
-                        }
-                        break;
-                    case 'view':
-                        if ($this->permissions['view_document'] && !$resourceArray['deleted']) {
+                        if (!empty($resourceArray['deleted'])) {
                             $resourceArray['actions'][] = $this->actions[$button];
                         }
                         break;
@@ -500,37 +453,21 @@ class CollectionsSelectionGetListProcessor extends modObjectGetListProcessor
     {
         $resourceArray['menu_actions'] = array();
 
-        if ($this->permissions['view_document'] && !$resourceArray['deleted']) {
-            $resourceArray['menu_actions']['view'] = $this->actions['view'];
-        }
-
-        if ($this->permissions['edit_document']) {
-            $resourceArray['menu_actions']['edit'] = $this->actions['edit'];
-            $resourceArray['menu_actions']['quickupdate'] = $this->actions['quickupdate'];
-        }
+        $resourceArray['menu_actions']['view'] = $this->actions['view'];
+        $resourceArray['menu_actions']['edit'] = $this->actions['edit'];
+        $resourceArray['menu_actions']['quickupdate'] = $this->actions['quickupdate'];
 
         if (!empty($resourceArray['published'])) {
-            if ($this->permissions['unpublish_document']) {
-                $resourceArray['menu_actions']['unpublish'] = $this->actions['unpublish'];
-            }
+            $resourceArray['menu_actions']['unpublish'] = $this->actions['unpublish'];
         } else {
-            if ($this->permissions['publish_document']) {
-                $resourceArray['menu_actions']['publish'] = $this->actions['publish'];
-            }
+            $resourceArray['menu_actions']['publish'] = $this->actions['publish'];
         }
 
         if (!empty($resourceArray['deleted'])) {
-            if ($this->permissions['undelete_document']) {
-                $resourceArray['menu_actions']['undelete'] = $this->actions['undelete'];
-            }
-
-            if ($this->permissions['purge_deleted']) {
-                $resourceArray['menu_actions']['remove'] = $this->actions['remove'];
-            }
+            $resourceArray['menu_actions']['undelete'] = $this->actions['undelete'];
+            $resourceArray['menu_actions']['remove'] = $this->actions['remove'];
         } else {
-            if ($this->permissions['delete_document']) {
-                $resourceArray['menu_actions']['delete'] = $this->actions['delete'];
-            }
+            $resourceArray['menu_actions']['delete'] = $this->actions['delete'];
         }
 
         $resourceArray['menu_actions']['unlink'] = $this->actions['unlink'];

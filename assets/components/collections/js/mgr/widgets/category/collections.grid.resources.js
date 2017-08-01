@@ -83,7 +83,7 @@ Ext.extend(collections.grid.ContainerCollections,MODx.grid.Grid,{
     }
     
     ,openChild: function(){
-        this.store.removeAll();
+        /*this.store.removeAll();
         
         this.getStore().baseParams.parent = this.menu.record.id;
         this.getBottomToolbar().changePage(1);
@@ -100,7 +100,13 @@ Ext.extend(collections.grid.ContainerCollections,MODx.grid.Grid,{
         
         this.body.slideIn('r', {stopFx:true, duration:.2});       
         
-        this.pushHistoryState(this.menu.record.id);
+        this.pushHistoryState(this.menu.record.id);*/
+        
+        var folderGet = '&folder=' + this.menu.record.id;
+        
+        //console.log('collections.template');
+        //window.location.reload();
+        MODx.loadPage(MODx.request.a, 'id=' + MODx.request.id + folderGet);
     }
 
     ,getColumns: function(config) {
@@ -108,26 +114,6 @@ Ext.extend(collections.grid.ContainerCollections,MODx.grid.Grid,{
 
         if (collections.template.bulkActions) {
             columns.unshift(this.sm);
-        }
-        
-        var wrapRenderer = function(renderer) {
-            if (typeof renderer === 'string') {
-                renderer = eval(renderer);
-            }
-            
-            var newRenderer = function(value, metaData, record, rowIndex, colIndex, store) {
-                record.data.self = this;
-                return renderer(value, metaData, record, rowIndex, colIndex, store);
-            };
-            return newRenderer.bind(this);
-        };
-        wrapRenderer = wrapRenderer.bind(this);
-        
-        for (var i = 0; i < columns.length; i++) {
-            if (columns[i].renderer) {
-                columns[i].renderer = wrapRenderer(columns[i].renderer);
-            }
-            columns[i].scope = self;   
         }
 
         return columns;
@@ -154,6 +140,7 @@ Ext.extend(collections.grid.ContainerCollections,MODx.grid.Grid,{
                 ,xtype: 'splitbutton'
                 ,scope: this
                 ,menu: resourceDerivatives
+                ,cls: 'primary-button'
             });
         } else {
             items.push({
@@ -241,10 +228,9 @@ Ext.extend(collections.grid.ContainerCollections,MODx.grid.Grid,{
     }
 
     ,clearFilter: function() {
-        var store = this.getStore();
-        store.baseParams = {
+        this.getStore().baseParams = {
             action: 'mgr/resource/getList'
-            ,parent: store.baseParams.parent
+            ,'parent': collections.template.parent
             ,sort: collections.template.sort.field
             ,dir: collections.template.sort.dir
         };
@@ -253,9 +239,6 @@ Ext.extend(collections.grid.ContainerCollections,MODx.grid.Grid,{
         this.getBottomToolbar().changePage(1);
     }
 
-    /**
-     * @deprecated use getEditChildUrl instead
-     */
     ,editChild: function(btn,e) {
         var selection = '';
         if (collections.template.parent != MODx.request.id){
@@ -274,34 +257,6 @@ Ext.extend(collections.grid.ContainerCollections,MODx.grid.Grid,{
         }
         
         MODx.loadPage(MODx.request.a, 'id=' + this.menu.record.id + selection + collectionGet + folderGet);
-    }
-    
-    ,getViewChildUrl: function(data) {
-        if (data.preview_url == '') {
-            return '#';
-        }
-        
-        return data.preview_url;                  
-    }
-    
-    ,getEditChildUrl: function(data) {
-        var selection = '';
-        if (collections.template.parent != MODx.request.id){
-           selection = '&selection=' + MODx.request.id;
-        }
-
-        var collectionGet = '';
-        if (this.currentFolder) {
-            collectionGet = '&collection=' + collections.template.parent
-        }
-        
-        var folderGet = '';
-        var query = Ext.urlDecode(location.search.replace('?', ''));
-        if (parseInt(query.folder) > 0) {
-            folderGet = '&folder=' + parseInt(query.folder); 
-        }
-        
-        return collections.getPageUrl(MODx.request.a, 'id=' + data.id + selection + collectionGet + folderGet);
     }
 
     ,createChild: function(btn,e) {
@@ -377,12 +332,12 @@ Ext.extend(collections.grid.ContainerCollections,MODx.grid.Grid,{
         var w = MODx.load({
             xtype: 'modx-window-resource-duplicate'
             ,resource: this.menu.record.id
-            ,hasChildren: this.menu.record.has_children == 1
+            ,hasChildren: false
             ,listeners: {
                 'success': {fn:function() {this.refresh();},scope:this}
             }
         });
-        w.config.hasChildren = this.menu.record.has_children == 1;
+        w.config.hasChildren = false;
         w.setValues(r);
         w.show();
         return false;
@@ -990,33 +945,33 @@ Ext.extend(collections.grid.ContainerCollections,MODx.grid.Grid,{
                     fn: function(toolbar){
                         toolbar.el.on('click', function (e) {
                             if(e.target.nodeName.toLowerCase() != 'button') return;
-
-                            var newCrumbs = [];
-                            for (var i = 0; i < toolbar.crumbs.length; i++) {
-                                newCrumbs.push(toolbar.crumbs[i]);
-                                if (toolbar.crumbs[i]['id'] == e.target.dataset.id) {
-                                    break;
-                                }
-                            }
-
-                            toolbar.crumbs = newCrumbs;
-                            toolbar.tpl.overwrite(toolbar.el, toolbar.crumbs);
-                            if (toolbar.crumbs.length == 1) {
-                                toolbar.hide();
-                                this.pushHistoryState();
+                            
+                            if (e.target.className == 'root') {
+                              MODx.loadPage(MODx.request.a, 'id=' + MODx.request.id);
                             } else {
-                                this.pushHistoryState(e.target.dataset.id);
+                              var newCrumbs = [];
+                              for (var i = 0; i < toolbar.crumbs.length; i++) {
+                                  newCrumbs.push(toolbar.crumbs[i]);
+                                  if (toolbar.crumbs[i]['id'] == e.target.dataset.id) {
+                                      break;
+                                  }
+                              }
+
+                              toolbar.crumbs = newCrumbs;
+                              toolbar.tpl.overwrite(toolbar.el, toolbar.crumbs);
+                              if (toolbar.crumbs.length == 1) {
+                                  toolbar.hide();
+                                  this.pushHistoryState();
+                              } else {
+                                  this.pushHistoryState(e.target.dataset.id);
+                              }
+                              
+                              toolbar.grid.currentFolder = e.target.dataset.id;
+                              toolbar.grid.store.removeAll();
+                              toolbar.grid.getStore().baseParams.parent = e.target.dataset.id;
+                              toolbar.grid.getBottomToolbar().changePage(1);
+                              toolbar.grid.body.slideIn('r', {stopFx:true, duration:.2});          
                             }
-
-
-                            toolbar.grid.currentFolder = e.target.dataset.id;
-
-                            toolbar.grid.store.removeAll();
-
-                            toolbar.grid.getStore().baseParams.parent = e.target.dataset.id;
-                            toolbar.grid.getBottomToolbar().changePage(1);
-
-                            toolbar.grid.body.slideIn('r', {stopFx:true, duration:.2});
                         }, this);
 
                         this.fireEvent('breadCrumbsRender', toolbar);

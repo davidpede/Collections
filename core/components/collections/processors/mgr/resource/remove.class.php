@@ -21,7 +21,7 @@ class CollectionsResourceRemoveProcessor extends modProcessor
 
     public function checkPermissions()
     {
-        return $this->modx->hasPermission('purge_deleted');
+        return $this->modx->hasPermission('delete_document');
     }
 
     public function getLanguageTopics()

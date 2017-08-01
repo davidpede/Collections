@@ -109,7 +109,15 @@ class CollectionContainerUpdateManagerController extends ResourceUpdateManagerCo
     }
 
     public function getCollectionsTemplate() {
+      
+      if ($_REQUEST['folder']) {
+        //$this->modx->log(xPDO::LOG_LEVEL_ERROR,'Label: ' . print_r('Im a folder', true));
+        $folderId = $this->modx->getObject('modResource', $_REQUEST['folder']);
+        $template = $this->collections->getCollectionsView($folderId);
+      } else {
         $template = $this->collections->getCollectionsView($this->resource);
+      }
+      
 
         $c = $this->modx->newQuery('CollectionTemplateColumn');
         $c->sortby('position', 'ASC');
@@ -169,7 +177,7 @@ class CollectionContainerUpdateManagerController extends ResourceUpdateManagerCo
         }
 
         $templateOptions = array(
-            'fields' => array('actions', 'action_edit', 'preview_url', 'menu_actions', 'icons', 'has_children'),
+            'fields' => array('actions', 'action_edit', 'preview_url', 'menu_actions', 'icons'),
             'columns' => array(),
             'sort' => array(
                 'field' => $template->sort_field . ':' . $template->sort_type,

@@ -1,13 +1,5 @@
 Changelog for Collections.
 
-- Don't makeURL for deleted resources & hide view button
-- Allow duplicating children
-- Fix TV search in selections
-- Check permissions before rendering specific action button / context menu action
-- Handle edit and view child as classic link, allowing to cmd/ctrl click to open in new tab
-- Fix clear filter clearing current folder
-- Remove 'overflow: hidden' to title on main column view to correct visual bug [#219]
-
 Collections 3.6.0
 ===================
 - Add sync tables resolver

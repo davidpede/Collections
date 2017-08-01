@@ -31,16 +31,6 @@ class CollectionsResourceGetListProcessor extends modObjectGetListProcessor
     public $searchQueryTitleOnly = false;
 
     public $iconMap = array();
-    
-    public $permissions = array(
-        'publish_document' => false,
-        'unpublish_document' => false,
-        'delete_document' => false,
-        'undelete_document' => false,
-        'view_document' => false,
-        'edit_document' => false,
-        'purge_deleted' => false,
-    );
 
     public function initialize()
     {
@@ -48,21 +38,31 @@ class CollectionsResourceGetListProcessor extends modObjectGetListProcessor
         if (empty($parent)) {
             return false;
         }
-        
-        $this->permissions = array(
-            'publish_document' => $this->modx->hasPermission('publish_document'),
-            'unpublish_document' => $this->modx->hasPermission('unpublish_document'),
-            'delete_document' => $this->modx->hasPermission('delete_document'),
-            'undelete_document' => $this->modx->hasPermission('undelete_document'),
-            'view_document' => $this->modx->hasPermission('view_document'),
-            'edit_document' => $this->modx->hasPermission('edit_document'),
-            'purge_deleted' => $this->modx->hasPermission('purge_deleted'),
-        );
-        
+
         $this->setActions();
 
         $parentObject = $this->modx->getObject('modResource', $parent);
+        $parentClass_key = $parentObject->class_key;
+        $parentContext = $parentObject->context_key;
+        
         /** @var CollectionTemplate $template */
+        /*if ($parentClass_key !== 'CollectionContainer') {
+          //$this->modx->log(xPDO::LOG_LEVEL_ERROR,'Label: ' . print_r('HELLO', true));
+          $pids = $this->modx->getParentIds($parent, 10, array('context' => $parentContext));
+          array_pop($pids); //remove zero
+          $count = count($pids);
+          $i = 0;
+            
+          while ($i < $count && $parentClass_key !== 'CollectionContainer') {
+            $parent = $this->modx->getObject('modResource', $pids[$i]);
+            if ($parent->class_key == 'CollectionContainer') {
+              $parentObject = $parent;
+              $parentClass_key = $parent->class_key;
+            }
+            ++$i;
+          }
+        }*/
+        
         $template = $this->modx->collections->getCollectionsView($parentObject);
 
         $sort = $this->getProperty('sort');
@@ -166,13 +166,11 @@ class CollectionsResourceGetListProcessor extends modObjectGetListProcessor
             'className' => 'view',
             'text' => $this->modx->lexicon('view'),
             'key' => 'view',
-            'urlFunction' => 'getViewChildUrl'
         );
         $this->actions['edit'] = array(
             'className' => 'edit',
             'text' => $this->modx->lexicon('edit'),
             'key' => 'edit',
-            'urlFunction' => 'getEditChildUrl'
         );
         $this->actions['quickupdate'] = array(
             'className' => 'quickupdate',
@@ -296,7 +294,6 @@ class CollectionsResourceGetListProcessor extends modObjectGetListProcessor
                     'OR:CreatedBy.username:LIKE' => '%' . $query . '%',
                 );
             }
-            
             if ($this->searchQueryExcludeTvs == false) {
                 // tv columns search rules
                 foreach ($this->tvColumns as $column) {
@@ -305,7 +302,6 @@ class CollectionsResourceGetListProcessor extends modObjectGetListProcessor
                     ));
                 }
             }
-            
             if ($this->searchQueryExcludeTagger == false) {
                 if ($this->useTagger) {
                     $c->leftJoin('TaggerTagResource', 'TagResource', array('TagResource.resource = modResource.id'));
@@ -476,12 +472,7 @@ class CollectionsResourceGetListProcessor extends modObjectGetListProcessor
         }
 
         $this->modx->getContext($resourceArray['context_key']);
-        
-        if(!$resourceArray['deleted']) {
-            $resourceArray['preview_url'] = $this->modx->makeUrl($resourceArray['id'], $resourceArray['context_key']);
-        } else {
-            $resourceArray['preview_url'] = '';
-        }
+        $resourceArray['preview_url'] = $this->modx->makeUrl($resourceArray['id'], $resourceArray['context_key']);
 
         return $resourceArray;
     }
@@ -494,32 +485,30 @@ class CollectionsResourceGetListProcessor extends modObjectGetListProcessor
             if (isset($this->actions[$button])) {
                 switch ($button) {
                     case 'publish':
-                        if ($this->permissions['publish_document'] && empty($resourceArray['published'])) {
+                        if (empty($resourceArray['published'])) {
                             $resourceArray['actions'][] = $this->actions[$button];
                         }
                         break;
                     case 'quickupdate':
-                        if ($this->permissions['edit_document']) {
-                            $resourceArray['actions'][] = $this->actions[$button];
-                        }
+                        $resourceArray['actions'][] = $this->actions[$button];
                         break;
                     case 'unpublish':
-                        if ($this->permissions['unpublish_document'] && !empty($resourceArray['published'])) {
+                        if (!empty($resourceArray['published'])) {
                             $resourceArray['actions'][] = $this->actions[$button];
                         }
                         break;
                     case 'delete':
-                        if ($this->permissions['delete_document'] && empty($resourceArray['deleted'])) {
+                        if (empty($resourceArray['deleted'])) {
                             $resourceArray['actions'][] = $this->actions[$button];
                         }
                         break;
                     case 'undelete':
-                        if ($this->permissions['undelete_document'] && !empty($resourceArray['deleted'])) {
+                        if (!empty($resourceArray['deleted'])) {
                             $resourceArray['actions'][] = $this->actions[$button];
                         }
                         break;
                     case 'remove':
-                        if ($this->permissions['purge_deleted'] && !empty($resourceArray['deleted'])) {
+                        if (!empty($resourceArray['deleted'])) {
                             $resourceArray['actions'][] = $this->actions[$button];
                         }
                         break;
@@ -528,19 +517,10 @@ class CollectionsResourceGetListProcessor extends modObjectGetListProcessor
                         $resourceArray['actions'][] = $this->actions['open'];
 //                        }
                         break;
-                    case 'edit':
-                        if ($this->permissions['edit_document']) {
-                            $resourceArray['actions'][] = $this->actions[$button];
-                        }
-                        break;
-                    case 'view':
-                        if ($this->permissions['view_document'] && !$resourceArray['deleted']) {
-                            $resourceArray['actions'][] = $this->actions[$button];
-                        }
-                        break;
                     default:
                         $resourceArray['actions'][] = $this->actions[$button];
                 }
+
             }
         }
 
@@ -555,42 +535,22 @@ class CollectionsResourceGetListProcessor extends modObjectGetListProcessor
             $resourceArray['menu_actions']['open'] = $this->actions['open'];
         }
 
-        if ($this->permissions['view_document'] && !$resourceArray['deleted']) {
-            $resourceArray['menu_actions']['view'] = $this->actions['view'];
-        }
-        
-        if ($this->permissions['edit_document']) {
-            $resourceArray['menu_actions']['edit'] = $this->actions['edit'];
-        }
-        
+        $resourceArray['menu_actions']['view'] = $this->actions['view'];
+        $resourceArray['menu_actions']['edit'] = $this->actions['edit'];
         $resourceArray['menu_actions']['duplicate'] = $this->actions['duplicate'];
-        
-        if ($this->permissions['edit_document']) {
-            $resourceArray['menu_actions']['quickupdate'] = $this->actions['quickupdate'];
-        }
+        $resourceArray['menu_actions']['quickupdate'] = $this->actions['quickupdate'];
 
         if (!empty($resourceArray['published'])) {
-            if ($this->permissions['unpublish_document']) {
-                $resourceArray['menu_actions']['unpublish'] = $this->actions['unpublish'];
-            }
+            $resourceArray['menu_actions']['unpublish'] = $this->actions['unpublish'];
         } else {
-            if ($this->permissions['publish_document']) {
-                $resourceArray['menu_actions']['publish'] = $this->actions['publish'];
-            }
+            $resourceArray['menu_actions']['publish'] = $this->actions['publish'];
         }
 
         if (!empty($resourceArray['deleted'])) {
-            if ($this->permissions['undelete_document']) {
-                $resourceArray['menu_actions']['undelete'] = $this->actions['undelete'];
-            }
-            
-            if ($this->permissions['purge_deleted']) {
-                $resourceArray['menu_actions']['remove'] = $this->actions['remove'];
-            }
+            $resourceArray['menu_actions']['undelete'] = $this->actions['undelete'];
+            $resourceArray['menu_actions']['remove'] = $this->actions['remove'];
         } else {
-            if ($this->permissions['delete_document']) {
-                $resourceArray['menu_actions']['delete'] = $this->actions['delete'];
-            }
+            $resourceArray['menu_actions']['delete'] = $this->actions['delete'];
         }
 
         return $resourceArray;
